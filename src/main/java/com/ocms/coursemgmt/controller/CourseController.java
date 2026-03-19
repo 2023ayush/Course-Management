@@ -1,7 +1,7 @@
 package com.ocms.coursemgmt.controller;
 
 import com.ocms.coursemgmt.dto.CourseRequest;
-import com.ocms.coursemgmt.entity.Course;
+import com.ocms.coursemgmt.dto.CourseResponse;
 import com.ocms.coursemgmt.entity.User;
 import com.ocms.coursemgmt.repository.UserRepository;
 import com.ocms.coursemgmt.service.CourseService;
@@ -28,8 +28,9 @@ public class CourseController {
 
     @PostMapping("/create")
     @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
-    public ResponseEntity<Course> createCourse(@RequestBody CourseRequest request,
-                                               Authentication authentication) {
+    public ResponseEntity<CourseResponse> createCourse(@RequestBody CourseRequest request,
+                                                       Authentication authentication) {
+
         String email = authentication.getName();
         User instructor = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Instructor not found"));
@@ -37,12 +38,11 @@ public class CourseController {
         Set<Long> instructorIds = new HashSet<>();
         instructorIds.add(instructor.getId());
 
-
         if (request.getInstructorIds() != null) {
             instructorIds.addAll(request.getInstructorIds());
         }
 
-        Course course = courseService.createCourse(
+        CourseResponse course = courseService.createCourse(
                 request.getTitle(),
                 request.getDescription(),
                 request.getSchedule(),
@@ -51,12 +51,13 @@ public class CourseController {
 
         return ResponseEntity.ok(course);
     }
+
+
     @PutMapping("/update/{id}")
     @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
-    public Course updateCourse(@PathVariable Long id,
-                               @RequestBody CourseRequest courseRequest,
-                               Authentication authentication) {
-
+    public CourseResponse updateCourse(@PathVariable Long id,
+                                       @RequestBody CourseRequest courseRequest,
+                                       Authentication authentication) {
 
         String email = authentication.getName();
         User loggedInInstructor = userRepository.findByEmail(email)
@@ -64,6 +65,7 @@ public class CourseController {
 
         return courseService.updateCourse(id, courseRequest, loggedInInstructor);
     }
+
 
     @DeleteMapping("/delete/{id}")
     @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
@@ -75,26 +77,27 @@ public class CourseController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('STUDENT','ADMIN','INSTRUCTOR')")
-    public List<Course> getAllCourse(){
+    public List<CourseResponse> getAllCourse(){
         return courseService.getAllCourse();
     }
 
+
     @PostMapping("/{courseId}/add-instructor/{instructorId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public Course addInstructor(@PathVariable Long courseId, @PathVariable Long instructorId){
+    public CourseResponse addInstructor(@PathVariable Long courseId, @PathVariable Long instructorId){
         return courseService.addInstructor(courseId,instructorId);
     }
 
     @DeleteMapping("/{courseId}/remove-instructor/{instructorId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> removeInstructor(
+    public ResponseEntity<CourseResponse> removeInstructor(
             @PathVariable Long courseId,
             @PathVariable Long instructorId) {
 
-        String message = courseService.removeInstructor(courseId, instructorId);
-
-        return ResponseEntity.ok(message);
+        CourseResponse response = courseService.removeInstructor(courseId, instructorId);
+        return ResponseEntity.ok(response);
     }
+    
     }
 
 

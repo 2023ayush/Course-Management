@@ -20,14 +20,14 @@ public class UserService implements UserServiceImp {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
-    private final EmailProducer emailProducer;
+   // private final EmailProducer emailProducer;
 
-    public UserService(UserRepository userRepository, JwtUtil jwtUtil, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, EmailProducer emailProducer){
+    public UserService(UserRepository userRepository, JwtUtil jwtUtil, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder){
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
-        this.emailProducer = emailProducer;
+        //this.emailProducer = emailProducer;
     }
 
     @Override
@@ -48,7 +48,7 @@ public class UserService implements UserServiceImp {
         emailMessage.setSubject("Welcome to Course Management System");
         emailMessage.setBody("<h1>Hello " + savedUser.getName() + "</h1><p>Your account has been successfully created!</p>");
 
-        emailProducer.sendEmail(emailMessage);
+     ///   emailProducer.sendEmail(emailMessage);
 
         UserResponse response = new UserResponse();
         response.setId(savedUser.getId());

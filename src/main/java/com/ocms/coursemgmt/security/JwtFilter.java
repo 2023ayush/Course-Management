@@ -1,5 +1,4 @@
 package com.ocms.coursemgmt.security;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,33 +21,50 @@ public class JwtFilter extends OncePerRequestFilter {
     private final CustomerUserDetailsService customerUserDetailsService;
 
     public JwtFilter(JwtUtil jwtUtil, CustomerUserDetailsService customerUserDetailsService){
-        this.customerUserDetailsService = customerUserDetailsService;
         this.jwtUtil = jwtUtil;
+        this.customerUserDetailsService = customerUserDetailsService;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
+
         String authHeader = request.getHeader("Authorization");
 
-        if(authHeader != null && authHeader.startsWith("Bearer ")) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+
             String token = authHeader.substring(7);
 
             try {
                 String email = jwtUtil.extractEmail(token);
-                UserDetails userDetails = customerUserDetailsService.loadUserByUsername(email);
 
-                if (jwtUtil.validateToken(token, userDetails.getUsername())) {
+                UserDetails userDetails =
+                        customerUserDetailsService.loadUserByUsername(email);
+
+                if (jwtUtil.validateAccessToken(token, userDetails.getUsername())) {
+
                     String role = jwtUtil.extractRole(token);
-                    List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken
-                            (userDetails, null, authorities);
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
 
+                    List<GrantedAuthority> authorities =
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role));
+
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    authorities
+                            );
+
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
-            }catch (Exception e){
-                System.out.println("Jwt Validation Failed " + e.getMessage());
+
+            } catch (Exception e) {
+                System.out.println("JWT Validation Failed: " + e.getMessage());
             }
         }
+
         filterChain.doFilter(request, response);
     }
 }

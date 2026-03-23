@@ -1,6 +1,9 @@
 package com.ocms.coursemgmt.dto;
 
-public class InstructorDto {
+import java.io.Serializable;
+
+public class InstructorDto implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private Long id;
     private String name;

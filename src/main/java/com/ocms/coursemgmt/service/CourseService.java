@@ -8,6 +8,8 @@ import com.ocms.coursemgmt.entity.User;
 import com.ocms.coursemgmt.exception.ResourceNotFoundException;
 import com.ocms.coursemgmt.repository.CourseRepository;
 import com.ocms.coursemgmt.repository.UserRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import java.util.HashSet;
 import java.util.List;
@@ -26,6 +28,7 @@ public CourseService(CourseRepository courseRepository, UserRepository userRepos
     this.userRepository = userRepository;
 }
 
+    @CacheEvict(value = "courses", allEntries = true)
     public CourseResponse createCourse(String title, String description, String schedule, Set<Long> instructorIds) {
         Course course = new Course();
         course.setTitle(title);
@@ -35,7 +38,7 @@ public CourseService(CourseRepository courseRepository, UserRepository userRepos
         Set<User> instructors = new HashSet<>();
         for (Long id : instructorIds) {
             User instructor = userRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Instructor not found: " + id));
+                    .orElseThrow(() -> new ResourceNotFoundException("Instructor not found: " + id));
             instructors.add(instructor);
         }
 
@@ -45,6 +48,7 @@ public CourseService(CourseRepository courseRepository, UserRepository userRepos
         return mapToResponse(saved);
     }
 
+    @CacheEvict(value = "courses", allEntries = true)
     public CourseResponse updateCourse(Long id, CourseRequest request, User loggedInInstructor) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Course Not Found"));
@@ -70,19 +74,34 @@ public CourseService(CourseRepository courseRepository, UserRepository userRepos
         return mapToResponse(updated);
     }
 
-public void deleteCourse(Long id){
+    @CacheEvict(value = "courses", allEntries = true)
+    public void deleteCourse(Long id){
     Course course = courseRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Course Not Found"));
     courseRepository.delete(course);
 }
 
 
+    @Cacheable(value = "courses")
     public List<CourseResponse> getAllCourse() {
+    System.out.println("Fetching from DB....");
         return courseRepository.findAll()
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
+
+    @Cacheable(value = "course", key = "#id")
+    public CourseResponse getCourseById(Long id){
+    System.out.println("Fetching from DB....");
+    Course course = courseRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Course Not Found"));
+    return mapToResponse(course);
+    }
+
+
+
+
+    @CacheEvict(value = "courses", allEntries = true)
     public CourseResponse addInstructor(Long courseId, Long instructorId){
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Course Not Found"));
@@ -104,6 +123,7 @@ public void deleteCourse(Long id){
         return mapToResponse(saved);
     }
 
+    @CacheEvict(value = "courses", allEntries = true)
     public CourseResponse removeInstructor(Long courseId, Long instructorId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
@@ -112,7 +132,7 @@ public void deleteCourse(Long id){
                 .orElseThrow(() -> new ResourceNotFoundException("Instructor not found"));
 
         if (!course.getInstructors().contains(instructor)) {
-            throw new RuntimeException("Instructor is not assigned");
+            throw new ResourceNotFoundException("Instructor is not assigned");
         }
 
         course.getInstructors().remove(instructor);

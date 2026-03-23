@@ -1,5 +1,6 @@
 package com.ocms.coursemgmt.exception;
 
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,4 +24,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleMaxSizeException(MaxUploadSizeExceededException ex) {
         return ResponseEntity.badRequest().body("File size exceeds 5MB limit");
     }
+
+    @ExceptionHandler(RedisConnectionFailureException.class)
+    public ResponseEntity<String> handleRedisError(RedisConnectionFailureException ex) {
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body("Redis is currently unavailable. Please try again later.");
+    }
+
 }

@@ -21,6 +21,16 @@ public class UserRequest {
 
     private Role role;
 
+    private String deviceId;
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
+
     public Role getRole() {
         return role;
     }

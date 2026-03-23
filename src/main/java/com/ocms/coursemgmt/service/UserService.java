@@ -1,6 +1,7 @@
 package com.ocms.coursemgmt.service;
 
 import com.ocms.coursemgmt.dto.EmailMessage;
+import com.ocms.coursemgmt.dto.RefreshRequest;
 import com.ocms.coursemgmt.dto.UserRequest;
 import com.ocms.coursemgmt.dto.UserResponse;
 import com.ocms.coursemgmt.entity.Role;
@@ -13,6 +14,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+import java.util.Map;
+import java.util.Set;
+
 @Service
 public class UserService implements UserServiceImp {
 
@@ -20,13 +25,15 @@ public class UserService implements UserServiceImp {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
+    private final RedisService redisService;
    // private final EmailProducer emailProducer;
 
-    public UserService(UserRepository userRepository, JwtUtil jwtUtil, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder){
+    public UserService(UserRepository userRepository, JwtUtil jwtUtil, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, RedisService redisService){
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
+        this.redisService = redisService;
         //this.emailProducer = emailProducer;
     }
 
@@ -60,7 +67,12 @@ public class UserService implements UserServiceImp {
     }
 
     @Override
-    public UserResponse LoginUser(UserRequest userRequest){
+    public Map<String, String> LoginUser(UserRequest userRequest){
+
+        if (userRequest.getDeviceId() == null || userRequest.getDeviceId().isEmpty()) {
+            throw new ResourceNotFoundException("Device ID is required");
+        }
+
         User user = userRepository.findByEmail(userRequest.getEmail()).orElseThrow(
                 () -> new ResourceNotFoundException("Invalid Email or Password"));
 
@@ -71,14 +83,70 @@ public class UserService implements UserServiceImp {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                 userRequest.getEmail(),userRequest.getPassword()));
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        UserResponse response = new UserResponse();
-        response.setId(user.getId());
-        response.setName(user.getName());
-        response.setEmail(user.getEmail());
-        response.setMessage("User Logged in Successfully");
-        response.setToken(token);
-        return response;
+        String deviceId = userRequest.getDeviceId();
+        Long userId = user.getId();
+
+        String accessToken = jwtUtil.generateAccessToken(user.getEmail(),String.valueOf(user.getRole()));
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+
+        redisService.saveRefreshToken(userId,deviceId,refreshToken);
+
+        return Map.of(
+                "AccessToken", accessToken,
+                "RefreshToken",refreshToken
+        );
     }
+    public Map<String, String> refresh(RefreshRequest request){
+        String refreshToken = request.getRefreshToken();
+        String deviceId = request.getDeviceId();
+
+
+        if(!jwtUtil.validateRefreshToken(refreshToken)){
+            throw new ResourceNotFoundException("Invalid Refresh Token");
+        }
+
+        String email = jwtUtil.extractEmail(refreshToken);
+
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+
+        Long userId = user.getId();
+
+        String storedToken = redisService.getRefreshToken(userId, deviceId);
+
+        if(storedToken == null){
+            throw new ResourceNotFoundException("Session Expired");
+        }
+        if(!storedToken.equals(refreshToken)){
+            redisService.deleteAllUserSessions(userId);
+            throw new ResourceNotFoundException("Token reuse detected!! All sessions deleted");
+        }
+
+        redisService.deleteRefreshToken(userId,deviceId);
+
+        String newAccessToken = jwtUtil.generateAccessToken(email, String.valueOf(user.getRole()));
+        String newRefreshToken = jwtUtil.generateRefreshToken(email);
+
+        redisService.saveRefreshToken(userId,deviceId,newRefreshToken);
+
+        return Map.of(
+                "AccessToken",newAccessToken,
+                "RefreshToken",newRefreshToken
+        );
+
+    }
+
+    public void logoutDevice(Long userId, String deviceId){
+        redisService.deleteRefreshToken(userId,deviceId);
+    }
+
+    public void logoutAllDevice(Long userId){
+        redisService.deleteAllUserSessions(userId);
+    }
+
+    public Set<String> getActiveDevices(Long userId){
+        return redisService.getUserSessions(userId);
+    }
+
+
 
 }

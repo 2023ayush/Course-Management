@@ -81,6 +81,12 @@ public class CourseController {
         return courseService.getAllCourse();
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('STUDENT','ADMIN','INSTRUCTOR')")
+    public CourseResponse getCourseById(@PathVariable Long id) {
+        return courseService.getCourseById(id);
+    }
+
 
     @PostMapping("/{courseId}/add-instructor/{instructorId}")
     @PreAuthorize("hasRole('ADMIN')")

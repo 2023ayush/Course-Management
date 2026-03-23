@@ -1,7 +1,9 @@
 package com.ocms.coursemgmt.dto;
+import java.io.Serializable;
 import java.util.Set;
 
-public class CourseResponse {
+public class CourseResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private Long id;
     private String title;

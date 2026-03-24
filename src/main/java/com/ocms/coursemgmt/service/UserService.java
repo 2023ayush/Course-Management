@@ -92,8 +92,8 @@ public class UserService implements UserServiceImp {
         redisService.saveRefreshToken(userId,deviceId,refreshToken);
 
         return Map.of(
-                "AccessToken", accessToken,
-                "RefreshToken",refreshToken
+                "accessToken", accessToken,
+                "refreshToken",refreshToken
         );
     }
     public Map<String, String> refresh(RefreshRequest request){
@@ -129,8 +129,8 @@ public class UserService implements UserServiceImp {
         redisService.saveRefreshToken(userId,deviceId,newRefreshToken);
 
         return Map.of(
-                "AccessToken",newAccessToken,
-                "RefreshToken",newRefreshToken
+                "accessToken",newAccessToken,
+                "refreshToken",newRefreshToken
         );
 
     }
@@ -146,7 +146,5 @@ public class UserService implements UserServiceImp {
     public Set<String> getActiveDevices(Long userId){
         return redisService.getUserSessions(userId);
     }
-
-
 
 }

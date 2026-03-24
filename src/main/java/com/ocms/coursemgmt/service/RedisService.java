@@ -17,8 +17,8 @@ public class RedisService {
     private static final long REFRESH_TTL = 7;
 
     public void saveRefreshToken(Long userId, String deviceId, String token){
-        String Key = userId + ":" + deviceId;
-        redisTemplate.opsForValue().set(Key,token,REFRESH_TTL, TimeUnit.DAYS);
+        String key = userId + ":" + deviceId;
+        redisTemplate.opsForValue().set(key,token,REFRESH_TTL, TimeUnit.DAYS);
     }
 
     public String getRefreshToken(Long userId, String deviceId){
